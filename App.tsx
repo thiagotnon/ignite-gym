@@ -9,6 +9,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { Loading } from "@components/Loading";
 import { Routes } from "./src/routes";
+import { AuthProvider } from "@contexts/AuthContext";
 
 export default function App() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_700Bold });
@@ -16,7 +17,13 @@ export default function App() {
   return (
     <GluestackUIProvider config={config}>
       <StatusBar barStyle="default" backgroundColor="transparent" translucent />
-      {fontsLoaded ? <Routes /> : <Loading />}
+      {fontsLoaded ? (
+        <AuthProvider>
+          <Routes />
+        </AuthProvider>
+      ) : (
+        <Loading />
+      )}
     </GluestackUIProvider>
   );
 }

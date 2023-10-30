@@ -7,6 +7,11 @@ import {
   Heading,
   Button,
   ScrollView,
+  Toast,
+  ToastDescription,
+  useToast,
+  ButtonSpinner,
+  HStack,
 } from "@gluestack-ui/themed";
 
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -18,6 +23,9 @@ import { AuthNavigatorRoutesProps } from "@routes/auth.routes";
 import BackgroundImg from "@assets/background.png";
 import LogoSvg from "@assets/logo.svg";
 import { Input } from "@components/Input";
+import { useAuth } from "@hooks/useAuth";
+import { useState } from "react";
+import { AppError } from "@utils/AppError";
 
 type FormDataProps = {
   email: string;
@@ -33,7 +41,10 @@ const signUpSchema = yup.object({
 });
 
 export const SignIn = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
   const navigation = useNavigation<AuthNavigatorRoutesProps>();
+  const toast = useToast();
 
   const {
     control,
@@ -47,8 +58,34 @@ export const SignIn = () => {
     navigation.navigate("signUp");
   }
 
-  function handleSignIn(data: FormDataProps) {
-    console.log(data);
+  async function handleSignIn({ email, password }: FormDataProps) {
+    try {
+      setIsLoading(true);
+      await signIn(email, password);
+    } catch (error) {
+      const isAppError = error instanceof AppError;
+      const title = isAppError
+        ? error.message
+        : "Não foi possível entrar. Tente novamente mais tarde.";
+
+      toast.show({
+        placement: "bottom",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            action="attention"
+            variant="solid"
+            backgroundColor="$red500"
+          >
+            <VStack space="xs">
+              <ToastDescription color="$white">{title}</ToastDescription>
+            </VStack>
+          </Toast>
+        ),
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
   return (
     <ScrollView
@@ -123,10 +160,24 @@ export const SignIn = () => {
                 },
               }}
               onPress={handleSubmit(handleSignIn)}
+              isDisabled={isLoading}
             >
-              <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
-                Entrar
-              </Text>
+              {isLoading ? (
+                <HStack>
+                  <ButtonSpinner mr="$1" />
+                  <Text
+                    color="$emerald100"
+                    fontFamily="$heading"
+                    fontSize="$sm"
+                  >
+                    Por favor, aguarde...
+                  </Text>
+                </HStack>
+              ) : (
+                <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
+                  Entrar
+                </Text>
+              )}
             </Button>
           </Center>
         </VStack>

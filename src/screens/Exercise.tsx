@@ -8,22 +8,129 @@ import {
   Heading,
   Button,
   ScrollView,
+  useToast,
+  Toast,
+  ButtonSpinner,
 } from "@gluestack-ui/themed";
 import { ArrowLeft } from "lucide-react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { AppNavigatorRoutesProps } from "@routes/app.routes";
 
 import BodySvg from "@assets/body.svg";
 import SeriesSvg from "@assets/series.svg";
 import RepetitionsSvg from "@assets/repetitions.svg";
+import { useEffect, useState } from "react";
+import { api } from "@services/api";
+import { AppError } from "@utils/AppError";
+import { ToastDescription } from "@gluestack-ui/themed";
+import { ExerciseDTO } from "@dtos/ExerciseDTO";
+import { Loading } from "@components/Loading";
+
+type RouteParamsProps = {
+  exerciseId: string;
+};
 
 export const Exercise = () => {
+  const [sendingRegister, setSendingRegister] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [exercise, setExercise] = useState<ExerciseDTO>({} as ExerciseDTO);
+
   const navigation = useNavigation<AppNavigatorRoutesProps>();
+
+  const route = useRoute();
+  const toast = useToast();
+
+  const { exerciseId } = route.params as RouteParamsProps;
+
+  async function fetchExerciseDetails() {
+    try {
+      setIsLoading(true);
+
+      const response = await api.get(`exercises/${exerciseId}`);
+      setExercise(response.data);
+    } catch (error) {
+      const isAppError = error instanceof AppError;
+      const title = isAppError
+        ? error.message
+        : "Não foi possível carregar o exercício.";
+
+      toast.show({
+        placement: "bottom",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            action="attention"
+            variant="solid"
+            backgroundColor="$red500"
+          >
+            <VStack space="xs">
+              <ToastDescription color="$white">{title}</ToastDescription>
+            </VStack>
+          </Toast>
+        ),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   function handleGoBack() {
     navigation.goBack();
   }
+
+  async function handleExerciseHistoryRegister() {
+    try {
+      setSendingRegister(true);
+      await api.post("history", { exercise_id: exerciseId });
+
+      toast.show({
+        placement: "bottom",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            action="success"
+            variant="solid"
+            backgroundColor="$emerald500"
+          >
+            <VStack space="xs">
+              <ToastDescription color="$white">
+                Parabéns! Exercício registrado no seu histórico
+              </ToastDescription>
+            </VStack>
+          </Toast>
+        ),
+      });
+      navigation.navigate("history");
+    } catch (error) {
+      const isAppError = error instanceof AppError;
+      const title = isAppError
+        ? error.message
+        : "Não foi possível registrar o exercício.";
+
+      toast.show({
+        placement: "bottom",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            action="attention"
+            variant="solid"
+            backgroundColor="$red500"
+          >
+            <VStack space="xs">
+              <ToastDescription color="$white">{title}</ToastDescription>
+            </VStack>
+          </Toast>
+        ),
+      });
+    } finally {
+      setSendingRegister(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchExerciseDetails();
+  }, [exerciseId]);
   return (
     <VStack flex={1}>
       <VStack bg="$secondary900" pt="$12" pb="$4" px="$5">
@@ -43,25 +150,27 @@ export const Exercise = () => {
             flexShrink={1}
             fontFamily="$heading"
           >
-            Puxada frontal
+            {exercise?.name}
           </Heading>
           <HStack alignItems="center">
             <BodySvg />
             <Text color="$secondary100" ml="$1" textTransform="capitalize">
-              Costas
+              {exercise?.group}
             </Text>
           </HStack>
         </HStack>
       </VStack>
-      <ScrollView>
+      {isLoading ? (
+        <Loading />
+      ) : (
         <VStack p="$6">
           <Image
             source={{
-              uri: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=2120&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+              uri: `${api.defaults.baseURL}/exercise/demo/${exercise.demo}`,
             }}
             alt="exercício"
             height={330}
-            borderRadius={4}
+            borderRadius={10}
             resizeMode="cover"
             style={{ marginBottom: 10 }}
           />
@@ -76,14 +185,14 @@ export const Exercise = () => {
               <HStack>
                 <SeriesSvg />
                 <Text color="$secondary200" ml="$2">
-                  3 séries
+                  {exercise?.series} séries
                 </Text>
               </HStack>
 
               <HStack>
                 <RepetitionsSvg />
                 <Text color="$secondary200" ml="$2">
-                  12 repetições
+                  {exercise?.repetitions} repetições
                 </Text>
               </HStack>
             </HStack>
@@ -96,14 +205,29 @@ export const Exercise = () => {
                   bg: "$emerald600",
                 },
               }}
+              onPress={handleExerciseHistoryRegister}
+              isDisabled={sendingRegister}
             >
-              <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
-                Realizado
-              </Text>
+              {sendingRegister ? (
+                <HStack>
+                  <ButtonSpinner mr="$1" />
+                  <Text
+                    color="$emerald100"
+                    fontFamily="$heading"
+                    fontSize="$sm"
+                  >
+                    Por favor, aguarde...
+                  </Text>
+                </HStack>
+              ) : (
+                <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
+                  Realizado
+                </Text>
+              )}
             </Button>
           </Box>
         </VStack>
-      </ScrollView>
+      )}
     </VStack>
   );
 };

@@ -7,6 +7,10 @@ import {
   Heading,
   Button,
   ScrollView,
+  useToast,
+  Toast,
+  ToastDescription,
+  HStack,
 } from "@gluestack-ui/themed";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -17,6 +21,11 @@ import BackgroundImg from "@assets/background.png";
 import LogoSvg from "@assets/logo.svg";
 import { Input } from "@components/Input";
 import { AppNavigatorRoutesProps } from "@routes/app.routes";
+import { api } from "@services/api";
+import { AppError } from "@utils/AppError";
+import { useState } from "react";
+import { ButtonSpinner } from "@gluestack-ui/themed";
+import { useAuth } from "@hooks/useAuth";
 
 type FormDataProps = {
   name: string;
@@ -39,7 +48,13 @@ const signUpSchema = yup.object({
 });
 
 export const SignUp = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
   const navigation = useNavigation<AppNavigatorRoutesProps>();
+
+  const toast = useToast();
+  const { signIn } = useAuth();
+
   const {
     control,
     handleSubmit,
@@ -52,8 +67,33 @@ export const SignUp = () => {
     navigation.goBack();
   }
 
-  function handleSignUp(data: FormDataProps) {
-    console.log(data);
+  async function handleSignUp({ email, name, password }: FormDataProps) {
+    try {
+      setIsLoading(true);
+      await api.post("users", { email, name, password });
+      await signIn(email, password);
+    } catch (error) {
+      setIsLoading(false);
+      const isAppError = error instanceof AppError;
+      const title = isAppError
+        ? error.message
+        : "Não foi possível criar a tonta.\nTente novamente mais tarde.";
+      toast.show({
+        placement: "bottom",
+        render: ({ id }) => (
+          <Toast
+            nativeID={"toast-" + id}
+            action="error"
+            variant="solid"
+            backgroundColor="$red500"
+          >
+            <VStack space="xs">
+              <ToastDescription color="$white">{title}</ToastDescription>
+            </VStack>
+          </Toast>
+        ),
+      });
+    }
   }
   return (
     <ScrollView
@@ -163,10 +203,24 @@ export const SignUp = () => {
                 },
               }}
               onPress={handleSubmit(handleSignUp)}
+              isDisabled={isLoading}
             >
-              <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
-                Criar e acessar
-              </Text>
+              {isLoading ? (
+                <HStack>
+                  <ButtonSpinner mr="$1" />
+                  <Text
+                    color="$emerald100"
+                    fontFamily="$heading"
+                    fontSize="$sm"
+                  >
+                    Por favor, aguarde...
+                  </Text>
+                </HStack>
+              ) : (
+                <Text color="$emerald100" fontFamily="$heading" fontSize="$sm">
+                  Criar e acessar
+                </Text>
+              )}
             </Button>
           </Center>
         </VStack>

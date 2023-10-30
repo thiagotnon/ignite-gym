@@ -1,9 +1,13 @@
+import { ExerciseDTO } from "@dtos/ExerciseDTO";
 import { HStack, Heading, Text, VStack, Icon } from "@gluestack-ui/themed";
+import { api } from "@services/api";
 import { ChevronRight } from "lucide-react-native";
 import { Image, TouchableOpacity, TouchableOpacityProps } from "react-native";
 
-type Props = TouchableOpacityProps & {};
-export const ExerciseCard = ({ ...rest }: Props) => {
+type Props = TouchableOpacityProps & {
+  data: ExerciseDTO;
+};
+export const ExerciseCard = ({ data, ...rest }: Props) => {
   return (
     <TouchableOpacity {...rest}>
       <HStack
@@ -16,7 +20,7 @@ export const ExerciseCard = ({ ...rest }: Props) => {
       >
         <Image
           source={{
-            uri: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=2120&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            uri: `${api.defaults.baseURL}/exercise/thumb/${data.thumb}`,
           }}
           alt="exercício"
           width={80}
@@ -27,10 +31,10 @@ export const ExerciseCard = ({ ...rest }: Props) => {
         />
         <VStack flex={1}>
           <Heading fontSize="$lg" color="$white" fontFamily="$heading">
-            Alongamento
+            {data.name}
           </Heading>
           <Text fontSize="$sm" color="$secondary200" mt={1} numberOfLines={2}>
-            3 séries x 12 repetições
+            {data.series} séries x {data.repetitions} repetições
           </Text>
         </VStack>
         <Icon as={ChevronRight} color="$secondary700" size="xl" mr={10} />

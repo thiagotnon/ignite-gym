@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, TouchableOpacity } from "react-native";
 import { useToken } from "@gluestack-ui/themed";
 
 import {
@@ -17,7 +17,7 @@ import { Exercise } from "@screens/Exercise";
 
 type AppRoutes = {
   home: undefined;
-  exercise: undefined;
+  exercise: { exerciseId: string };
   profile: undefined;
   history: undefined;
 };
